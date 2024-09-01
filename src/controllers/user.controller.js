@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
-import mongoose from "mongoose";
 
 const options = {
     httpOnly: true,
@@ -183,6 +183,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken =
         req.cookies.refreshToken || req.body.refreshToken;
 
+    console.log("::::::::::  ", incomingRefreshToken);
     if (!incomingRefreshToken) {
         throw new ApiError(401, "Unauthorized Request");
     }
@@ -202,7 +203,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Refresh Token is Expired or Used");
     }
 
-    const { accessToken, refreshToken } = generateAccessAndRefreshToken(
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
         user._id
     );
 
@@ -258,7 +259,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Please fill in all fields");
     }
 
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
@@ -334,8 +335,8 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-    const username = req.params;
-
+    const { username } = req.params;
+    console.log(username);
     if (!username?.trim()) {
         throw new ApiError(400, "Username is required");
     }
@@ -375,6 +376,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                         if: {
                             $in: [req.user?._id, "$subscribers.subscribe"],
                         },
+                        then: true,
+                        else: false,
                     },
                 },
             },
@@ -396,8 +399,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     if (!channel?.length) {
         throw new ApiError(404, "Channel does not exists");
     }
-
-    console.log(":::: Channel ::::", channel);
 
     return res
         .status(200)
@@ -461,6 +462,8 @@ const getWatchHistory = asyncHandler(async (req, res) => {
 export {
     changeCurrentPassword,
     getCurrentUser,
+    getUserChannelProfile,
+    getWatchHistory,
     loginUser,
     logoutUser,
     refreshAccessToken,
@@ -468,6 +471,4 @@ export {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
-    getUserChannelProfile,
-    getWatchHistory,
 };
